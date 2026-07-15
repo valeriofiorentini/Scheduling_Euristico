@@ -42,12 +42,17 @@ with st.expander("Genera istanza casuale"):
 st.subheader("Job")
 
 if "df_jobs" not in st.session_state:
+    jobs_iniziali = genera_istanza_casuale(50, seed=0)
     st.session_state.df_jobs = pd.DataFrame(
         [
-            {"id": 1, "processing_j": 1.0, "release_time_j": 0.0, "coefficiente_a_j": 1.0, "coefficiente_b_j": 10.0},
-            {"id": 2, "processing_j": 1.0, "release_time_j": 2.0, "coefficiente_a_j": 0.0, "coefficiente_b_j": 20.0},
-            {"id": 3, "processing_j": 1.0, "release_time_j": 2.0, "coefficiente_a_j": 0.5, "coefficiente_b_j": 5.0},
-            {"id": 4, "processing_j": 1.0, "release_time_j": 0.0, "coefficiente_a_j": 2.0, "coefficiente_b_j": 50.0},
+            {
+                "id": job.id,
+                "processing_j": round(job.processing_j, 3),
+                "release_time_j": round(job.release_time_j, 3),
+                "coefficiente_a_j": round(job.coefficiente_a_j, 3),
+                "coefficiente_b_j": round(job.coefficiente_b_j, 3),
+            }
+            for job in jobs_iniziali.values()
         ]
     )
 
