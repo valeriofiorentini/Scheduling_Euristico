@@ -5,6 +5,7 @@ import streamlit as st
 from scheduling import (
     Job,
     calcola_utilita_minima,
+    genera_istanza_casuale,
     iterated_local_search,
     ricerca_locale_scambio,
     simulated_annealing,
@@ -15,6 +16,28 @@ st.set_page_config(page_title="Scheduling - Ricerca Locale", layout="centered")
 
 st.title("Scheduling: massimizzazione dell'utilità minima")
 st.caption("Ricerca locale basata su scambio a coppie (pairwise swap)")
+
+with st.expander("Genera istanza casuale"):
+    st.caption("a_j ∈ [1, 5], b_j ∈ [10, 200], p_j ∈ [1, 15], r_j ∈ [0, 2·n_job]")
+    col_n, col_seed, col_btn = st.columns([1, 1, 1])
+    n_jobs_casuali = col_n.number_input("Numero di job", min_value=2, max_value=500, value=50)
+    seed_casuale = col_seed.number_input("Seed", min_value=0, value=0, step=1)
+    if col_btn.button("Genera", type="primary"):
+        nuovi_jobs = genera_istanza_casuale(int(n_jobs_casuali), seed=int(seed_casuale))
+        st.session_state.df_jobs = pd.DataFrame(
+            [
+                {
+                    "id": job.id,
+                    "processing_j": round(job.processing_j, 3),
+                    "release_time_j": round(job.release_time_j, 3),
+                    "coefficiente_a_j": round(job.coefficiente_a_j, 3),
+                    "coefficiente_b_j": round(job.coefficiente_b_j, 3),
+                }
+                for job in nuovi_jobs.values()
+            ]
+        )
+        st.session_state.sequenza_default = list(nuovi_jobs.keys())
+        st.rerun()
 
 st.subheader("Job")
 
