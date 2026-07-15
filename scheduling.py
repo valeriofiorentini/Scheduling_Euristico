@@ -28,8 +28,13 @@ def genera_istanza_casuale(n_jobs, seed=None):
             id=job_id,
             processing_j=rng.uniform(1, 15),
             release_time_j=rng.uniform(0, 2 * n_jobs),
-            coefficiente_a_j=rng.uniform(1, 5),
-            coefficiente_b_j=rng.uniform(10, 200),
+            #coefficiente_a_j=rng.uniform(1, 5),
+            #@todo overfitting
+            #coefficiente_a_j=rng.uniform(0.1, 1),
+            coefficiente_a_j=rng.uniform(0.1, 2),
+            #coefficiente_b_j=rng.uniform(10, 200),
+            #@todo overfitting
+            coefficiente_b_j=rng.uniform(200, 2000),
         )
     return jobs_by_id
 
@@ -205,6 +210,38 @@ def iterated_local_search(sequenza_iniziale, jobs_by_id, iterazioni=20,
         sequenza_corrente, utilita_corrente = sequenza_locale, utilita_locale
 
     return migliore_sequenza, migliore_utilita
+
+
+def maxmin_greedy(jobs_by_id):
+    """MaxMinGreedy (Nicosia, Pacifici, Pferschy 2026): algoritmo esatto O(n^2)
+    per 1|uj|umin, cioe' senza release date. Costruisce la sequenza a ritroso:
+    a ogni passo assegna all'ultima posizione libera il job con l'utilita'
+    piu' alta se completasse esattamente al tempo T corrente, poi riduce T
+    del suo processing time e ripete per la posizione precedente.
+
+    Garanzia di ottimalita' valida solo se tutti i release_time_j sono 0;
+    con release date il problema e' NP-hard e questo greedy resta euristico.
+    """
+    da_schedulare = set(jobs_by_id.keys())
+    tempo_residuo = sum(job.processing_j for job in jobs_by_id.values())
+
+    n = len(jobs_by_id)
+    sequenza = [None] * n
+
+    for posizione in range(n - 1, -1, -1):
+        job_scelto = max(
+            da_schedulare,
+            key=lambda job_id: (
+                jobs_by_id[job_id].coefficiente_b_j
+                - jobs_by_id[job_id].coefficiente_a_j * tempo_residuo
+            ),
+        )
+        sequenza[posizione] = job_scelto
+        tempo_residuo -= jobs_by_id[job_scelto].processing_j
+        da_schedulare.remove(job_scelto)
+
+    valore = calcola_utilita_minima(sequenza, jobs_by_id)
+    return sequenza, valore
 
 
 if __name__ == "__main__":
