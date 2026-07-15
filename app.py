@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from scheduling import (
+    calcola_utilita_minima,
     genera_istanza_casuale,
     iterated_local_search,
     ricerca_locale_scambio,
@@ -50,20 +51,23 @@ def confronta_10_istanze(
     ils_iterazioni, ils_scambi,
 ):
     righe_multi = []
+    righe_dettaglio = []
+
     for i in range(10):
         jobs_istanza = genera_istanza_casuale(int(n_jobs), seed=i)
-        seq_istanza = list(jobs_istanza.keys())
+        seq_iniziale = list(jobs_istanza.keys())
+        valore_iniziale = calcola_utilita_minima(seq_iniziale, jobs_istanza)
 
-        _, v_locale = ricerca_locale_scambio(seq_istanza, jobs_istanza)
-        _, v_tabu = tabu_search(
-            seq_istanza, jobs_istanza, iterazioni=int(tabu_iterazioni), tabu_tenure=int(tabu_tenure),
+        seq_locale, v_locale = ricerca_locale_scambio(seq_iniziale, jobs_istanza)
+        seq_tabu, v_tabu = tabu_search(
+            seq_iniziale, jobs_istanza, iterazioni=int(tabu_iterazioni), tabu_tenure=int(tabu_tenure),
         )
-        _, v_sa = simulated_annealing(
-            seq_istanza, jobs_istanza, iterazioni=int(sa_iterazioni),
+        seq_sa, v_sa = simulated_annealing(
+            seq_iniziale, jobs_istanza, iterazioni=int(sa_iterazioni),
             temperatura_iniziale=sa_temperatura, raffreddamento=sa_raffreddamento, seed=i,
         )
-        _, v_ils = iterated_local_search(
-            seq_istanza, jobs_istanza, iterazioni=int(ils_iterazioni),
+        seq_ils, v_ils = iterated_local_search(
+            seq_iniziale, jobs_istanza, iterazioni=int(ils_iterazioni),
             num_scambi_perturbazione=int(ils_scambi), seed=i,
         )
 
@@ -75,10 +79,26 @@ def confronta_10_istanze(
             "Iterated Local Search": v_ils,
         })
 
-    return pd.DataFrame(righe_multi)
+        for nome_algo, seq_finale, v_finale in [
+            ("Ricerca locale", seq_locale, v_locale),
+            ("Tabu Search", seq_tabu, v_tabu),
+            ("Simulated Annealing", seq_sa, v_sa),
+            ("Iterated Local Search", seq_ils, v_ils),
+        ]:
+            righe_dettaglio.append({
+                "istanza": i + 1,
+                "algoritmo": nome_algo,
+                "sequenza iniziale (random)": ",".join(str(j) for j in seq_iniziale),
+                "valore iniziale": round(valore_iniziale, 3),
+                "sequenza finale": ",".join(str(j) for j in seq_finale),
+                "valore finale": round(v_finale, 3),
+                "miglioramento": round(v_finale - valore_iniziale, 3),
+            })
+
+    return pd.DataFrame(righe_multi), pd.DataFrame(righe_dettaglio)
 
 
-df_multi = confronta_10_istanze(
+df_multi, df_dettaglio = confronta_10_istanze(
     int(n_jobs_multi), tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura, sa_raffreddamento,
     ils_iterazioni, ils_scambi,
 )
@@ -122,3 +142,15 @@ st.dataframe(
     use_container_width=True,
     hide_index=True,
 )
+
+st.divider()
+st.subheader("Dettaglio per istanza e algoritmo")
+st.caption(
+    "Per ogni istanza: sequenza iniziale (casuale) e relativo valore obiettivo, "
+    "sequenza finale trovata da ciascun algoritmo e relativo valore obiettivo."
+)
+
+istanza_scelta = st.selectbox("Filtra per istanza", ["Tutte"] + [str(i) for i in range(1, 11)])
+df_filtrato = df_dettaglio if istanza_scelta == "Tutte" else df_dettaglio[df_dettaglio["istanza"] == int(istanza_scelta)]
+
+st.dataframe(df_filtrato, use_container_width=True, hide_index=True)
