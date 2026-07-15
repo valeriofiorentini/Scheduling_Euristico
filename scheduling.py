@@ -14,23 +14,45 @@ class Job:
         self.coefficiente_b_j = coefficiente_b_j   # b_j
 
 
-def genera_istanza_casuale(n_jobs, seed=None, con_release_date=False):
-    """Genera un'istanza casuale di n_jobs job.
+SCENARI_RELEASE_DATE = {
+    "nessuno": "Nessuna release date — 1|uj|umin, polinomiale (Teorema 2)",
+    "singolo": "Un solo job con release date — 1|rj,uj|umin con un rj>0, debolmente NP-hard (Teorema 4)",
+    "arbitrario": "Release date arbitrarie per tutti i job — 1|rj,uj|umin, fortemente NP-hard (Teorema 3)",
+    "uguali": "Processing time uguali per tutti i job, release date arbitrarie — 1|pj=p,rj,uj|umin, polinomiale (Teorema 9)",
+}
 
-    a_j uniforme in [0.1, 2] (frazionario), b_j uniforme in [200, 2000],
-    p_j uniforme in [1, 15]. Se con_release_date=False (default) si ottiene
-    il problema 1|uj|umin (nessuna release date, come in Nicosia, Pacifici,
-    Pferschy 2026), dove MaxMinGreedy e' garantito ottimo. Se True, r_j e'
-    uniforme in [0, 2*n_jobs]: il problema 1|rj,uj|umin diventa NP-hard e
-    nessun metodo ha piu' garanzia di ottimalita'.
+
+def genera_istanza_casuale(n_jobs, seed=None, scenario="nessuno"):
+    """Genera un'istanza casuale di n_jobs job, in uno dei quattro scenari di
+    release date analizzati in Nicosia, Pacifici, Pferschy (2026) — vedi
+    SCENARI_RELEASE_DATE per la corrispondenza con i teoremi del paper.
+
+    In tutti gli scenari: a_j uniforme in [0.1, 2] (frazionario),
+    b_j uniforme in [200, 2000].
     """
+    if scenario not in SCENARI_RELEASE_DATE:
+        raise ValueError(f"scenario deve essere uno tra {list(SCENARI_RELEASE_DATE)}")
+
     rng = random.Random(seed)
     jobs_by_id = {}
+
+    processing_comune = rng.uniform(1, 15) if scenario == "uguali" else None
+    job_con_release = rng.randint(1, n_jobs) if scenario == "singolo" else None
+
     for job_id in range(1, n_jobs + 1):
+        if scenario == "nessuno":
+            r_j = 0.0
+        elif scenario == "singolo":
+            r_j = rng.uniform(0, 2 * n_jobs) if job_id == job_con_release else 0.0
+        else:  # "arbitrario" o "uguali"
+            r_j = rng.uniform(0, 2 * n_jobs)
+
+        p_j = processing_comune if scenario == "uguali" else rng.uniform(1, 15)
+
         jobs_by_id[job_id] = Job(
             id=job_id,
-            processing_j=rng.uniform(1, 15),
-            release_time_j=rng.uniform(0, 2 * n_jobs) if con_release_date else 0.0,
+            processing_j=p_j,
+            release_time_j=r_j,
             coefficiente_a_j=rng.uniform(0.1, 2),
             coefficiente_b_j=rng.uniform(200, 2000),
         )

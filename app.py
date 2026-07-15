@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from scheduling import (
+    SCENARI_RELEASE_DATE,
     calcola_utilita_minima,
     genera_istanza_casuale,
     iterated_local_search,
@@ -22,22 +23,19 @@ st.caption(
 
 st.subheader("Confronto su 10 istanze casuali")
 
-con_release_date = st.checkbox(
-    "Includi release date casuali (istanza più difficile — problema NP-hard, "
-    "MaxMinGreedy non è più garantito ottimo)",
-    value=False,
+scenario = st.selectbox(
+    "Scenario (release date) — dal paper Nicosia-Pacifici-Pferschy 2026",
+    list(SCENARI_RELEASE_DATE.keys()),
+    format_func=lambda s: SCENARI_RELEASE_DATE[s],
 )
+ottimo_garantito = scenario == "nessuno"
 
-if con_release_date:
-    st.caption(
-        "Problema 1|rj,uj|umin (con release date, NP-hard secondo Nicosia-Pacifici-Pferschy 2026). "
-        "MaxMinGreedy resta un riferimento ma non un ottimo garantito: usiamo il miglior valore "
-        "tra tutti i metodi come proxy dell'ottimo."
-    )
+if ottimo_garantito:
+    st.caption("MaxMinGreedy è garantito ottimo esatto in questo scenario.")
 else:
     st.caption(
-        "Problema 1|uj|umin (nessuna release date, come in Nicosia-Pacifici-Pferschy 2026), "
-        "dove MaxMinGreedy è garantito ottimo esatto."
+        "MaxMinGreedy resta solo un riferimento euristico in questo scenario (non garantito ottimo): "
+        "usiamo il miglior valore tra tutti i metodi come proxy dell'ottimo."
     )
 st.caption("a_j ∈ [0.1,2] (frazionario), b_j ∈ [200,2000], p_j ∈ [1,15]. 10 istanze indipendenti (seed 0-9).")
 
@@ -62,14 +60,14 @@ with st.expander("Parametri degli algoritmi"):
 
 @st.cache_data(show_spinner="Genero e confronto le 10 istanze...")
 def confronta_10_istanze(
-    n_jobs, con_release_date, tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura, sa_raffreddamento,
+    n_jobs, scenario, tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura, sa_raffreddamento,
     ils_iterazioni, ils_scambi,
 ):
     righe_multi = []
     righe_dettaglio = []
 
     for i in range(10):
-        jobs_istanza = genera_istanza_casuale(int(n_jobs), seed=i, con_release_date=con_release_date)
+        jobs_istanza = genera_istanza_casuale(int(n_jobs), seed=i, scenario=scenario)
         seq_iniziale = list(jobs_istanza.keys())
         valore_iniziale = calcola_utilita_minima(seq_iniziale, jobs_istanza)
 
@@ -115,7 +113,7 @@ def confronta_10_istanze(
 
 
 df_multi, df_dettaglio = confronta_10_istanze(
-    int(n_jobs_multi), con_release_date, tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura,
+    int(n_jobs_multi), scenario, tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura,
     sa_raffreddamento, ils_iterazioni, ils_scambi,
 )
 
@@ -150,7 +148,7 @@ st.plotly_chart(fig_multi, use_container_width=True)
 st.dataframe(df_multi.round(2), use_container_width=True, hide_index=True)
 
 migliori = df_multi[algoritmi_multi].max(axis=1)
-etichetta_migliore = "miglior valore tra i metodi (proxy dell'ottimo)" if con_release_date else "ottimo esatto (MaxMinGreedy)"
+etichetta_migliore = "ottimo esatto (MaxMinGreedy)" if ottimo_garantito else "miglior valore tra i metodi (proxy dell'ottimo)"
 st.markdown(f"**Quante volte ciascun metodo eguaglia il {etichetta_migliore}:**")
 vittorie = {
     nome: int((df_multi[nome].sub(migliori).abs() < 1e-6).sum())
@@ -182,7 +180,7 @@ st.caption(
     "se continua a salire fino alla fine, servono più iterazioni."
 )
 
-istanza_convergenza = genera_istanza_casuale(int(n_jobs_multi), seed=0, con_release_date=con_release_date)
+istanza_convergenza = genera_istanza_casuale(int(n_jobs_multi), seed=0, scenario=scenario)
 seq_convergenza = list(istanza_convergenza.keys())
 
 _, _, storico_tabu = tabu_search(
