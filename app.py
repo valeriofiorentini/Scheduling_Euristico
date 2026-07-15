@@ -246,3 +246,83 @@ st.dataframe(
     use_container_width=True,
     hide_index=True,
 )
+
+st.divider()
+st.subheader("Confronto su 10 istanze casuali")
+st.caption(
+    "Genera 10 istanze indipendenti (seed 0-9) con gli stessi range — "
+    "a_j ∈ [1,5], b_j ∈ [10,200], p_j ∈ [1,15] — ed esegue tutti e 4 gli algoritmi su ciascuna."
+)
+
+n_jobs_multi = st.number_input("Job per istanza", min_value=2, max_value=500, value=50, key="n_jobs_multi")
+
+
+@st.cache_data(show_spinner="Genero e confronto le 10 istanze...")
+def confronta_10_istanze(n_jobs):
+    righe_multi = []
+    for i in range(10):
+        jobs_istanza = genera_istanza_casuale(int(n_jobs), seed=i)
+        seq_istanza = list(jobs_istanza.keys())
+
+        _, v_locale = ricerca_locale_scambio(seq_istanza, jobs_istanza)
+        _, v_tabu = tabu_search(seq_istanza, jobs_istanza, iterazioni=200, tabu_tenure=10)
+        _, v_sa = simulated_annealing(
+            seq_istanza, jobs_istanza, iterazioni=2000, temperatura_iniziale=20.0,
+            raffreddamento=0.995, seed=i,
+        )
+        _, v_ils = iterated_local_search(
+            seq_istanza, jobs_istanza, iterazioni=30, num_scambi_perturbazione=4, seed=i,
+        )
+
+        righe_multi.append({
+            "istanza": i + 1,
+            "Ricerca locale": v_locale,
+            "Tabu Search": v_tabu,
+            "Simulated Annealing": v_sa,
+            "Iterated Local Search": v_ils,
+        })
+
+    return pd.DataFrame(righe_multi)
+
+
+df_multi = confronta_10_istanze(int(n_jobs_multi))
+
+algoritmi_multi = ["Ricerca locale", "Tabu Search", "Simulated Annealing", "Iterated Local Search"]
+colori_multi = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]
+
+fig_multi = go.Figure()
+for nome, colore in zip(algoritmi_multi, colori_multi):
+    fig_multi.add_trace(
+        go.Bar(
+            x=df_multi["istanza"],
+            y=df_multi[nome],
+            name=nome,
+            marker_color=colore,
+        )
+    )
+fig_multi.update_layout(
+    barmode="group",
+    xaxis_title="Istanza",
+    yaxis_title="Utilità minima",
+    xaxis=dict(tickmode="linear", dtick=1),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+    margin=dict(t=60, b=20),
+    plot_bgcolor="#fcfcfb",
+    paper_bgcolor="#fcfcfb",
+    font_color="#0b0b0b",
+)
+st.plotly_chart(fig_multi, use_container_width=True)
+
+st.dataframe(df_multi.round(2), use_container_width=True, hide_index=True)
+
+migliori = df_multi[algoritmi_multi].max(axis=1)
+st.markdown("**Quante volte ciascun metodo eguaglia il migliore trovato:**")
+vittorie = {
+    nome: int((df_multi[nome].sub(migliori).abs() < 1e-6).sum())
+    for nome in algoritmi_multi
+}
+st.dataframe(
+    pd.DataFrame({"Algoritmo": list(vittorie.keys()), "Istanze vinte (su 10)": list(vittorie.values())}),
+    use_container_width=True,
+    hide_index=True,
+)
