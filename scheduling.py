@@ -14,6 +14,26 @@ class Job:
         self.coefficiente_b_j = coefficiente_b_j   # b_j
 
 
+def genera_istanza_casuale(n_jobs, seed=None):
+    """Genera un'istanza casuale di n_jobs job.
+
+    a_j uniforme in [1, 5] (frazionario), b_j uniforme in [10, 200],
+    p_j uniforme in [1, 15], r_j uniforme in [0, 2*n_jobs] per distribuire
+    i rilasci su un orizzonte proporzionato al numero di job.
+    """
+    rng = random.Random(seed)
+    jobs_by_id = {}
+    for job_id in range(1, n_jobs + 1):
+        jobs_by_id[job_id] = Job(
+            id=job_id,
+            processing_j=rng.uniform(1, 15),
+            release_time_j=rng.uniform(0, 2 * n_jobs),
+            coefficiente_a_j=rng.uniform(1, 5),
+            coefficiente_b_j=rng.uniform(10, 200),
+        )
+    return jobs_by_id
+
+
 def calcola_utilita_minima(sequenza, jobs_by_id):
     """simula l'esecuzione della sequenza e restituisce l'utilita' minima tra i job."""
     tempo_corrente = 0.0
