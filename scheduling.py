@@ -14,12 +14,15 @@ class Job:
         self.coefficiente_b_j = coefficiente_b_j   # b_j
 
 
-def genera_istanza_casuale(n_jobs, seed=None):
-    """Genera un'istanza casuale di n_jobs job per il problema 1|uj|umin
-    (nessuna release date, come in Nicosia, Pacifici, Pferschy 2026).
+def genera_istanza_casuale(n_jobs, seed=None, con_release_date=False):
+    """Genera un'istanza casuale di n_jobs job.
 
     a_j uniforme in [0.1, 2] (frazionario), b_j uniforme in [200, 2000],
-    p_j uniforme in [1, 15], r_j = 0 per tutti i job.
+    p_j uniforme in [1, 15]. Se con_release_date=False (default) si ottiene
+    il problema 1|uj|umin (nessuna release date, come in Nicosia, Pacifici,
+    Pferschy 2026), dove MaxMinGreedy e' garantito ottimo. Se True, r_j e'
+    uniforme in [0, 2*n_jobs]: il problema 1|rj,uj|umin diventa NP-hard e
+    nessun metodo ha piu' garanzia di ottimalita'.
     """
     rng = random.Random(seed)
     jobs_by_id = {}
@@ -27,7 +30,7 @@ def genera_istanza_casuale(n_jobs, seed=None):
         jobs_by_id[job_id] = Job(
             id=job_id,
             processing_j=rng.uniform(1, 15),
-            release_time_j=0.0,
+            release_time_j=rng.uniform(0, 2 * n_jobs) if con_release_date else 0.0,
             coefficiente_a_j=rng.uniform(0.1, 2),
             coefficiente_b_j=rng.uniform(200, 2000),
         )
@@ -88,15 +91,19 @@ def vicini_scambio(sequenza):
             yield candidata
 
 
-def tabu_search(sequenza_iniziale, jobs_by_id, iterazioni=100, tabu_tenure=5):
+def tabu_search(sequenza_iniziale, jobs_by_id, iterazioni=100, tabu_tenure=5, traccia=False):
     """Tabu Search come la ricerca locale, ma accetta anche mosse peggiorative
     per uscire dai minimi locali, evitando pero di tornare su sequenze visitate di recente (tabu list).
+
+    Se traccia=True restituisce anche la lista del miglior valore trovato
+    fino a ciascuna iterazione (curva di convergenza).
     """
     sequenza_corrente = list(sequenza_iniziale)
     utilita_corrente = calcola_utilita_minima(sequenza_corrente, jobs_by_id)
 
     migliore_sequenza = list(sequenza_corrente)
     migliore_utilita = utilita_corrente
+    storico = [migliore_utilita]
 
     tabu_list = []  # coda di sequenze (tuple) vietate temporaneamente
 
@@ -114,6 +121,7 @@ def tabu_search(sequenza_iniziale, jobs_by_id, iterazioni=100, tabu_tenure=5):
                 migliore_vicino = candidata
 
         if migliore_vicino is None:
+            storico.append(migliore_utilita)
             break  # tutti i vicini sono tabu
 
         sequenza_corrente = migliore_vicino
@@ -127,13 +135,20 @@ def tabu_search(sequenza_iniziale, jobs_by_id, iterazioni=100, tabu_tenure=5):
             migliore_sequenza = list(sequenza_corrente)
             migliore_utilita = utilita_corrente
 
+        storico.append(migliore_utilita)
+
+    if traccia:
+        return migliore_sequenza, migliore_utilita, storico
     return migliore_sequenza, migliore_utilita
 
 
 def simulated_annealing(sequenza_iniziale, jobs_by_id, iterazioni=500,
-                         temperatura_iniziale=10.0, raffreddamento=0.95, seed=None):
+                         temperatura_iniziale=10.0, raffreddamento=0.95, seed=None, traccia=False):
     """Simulated Annealing: accetta uno scambio peggiorativo con probabilita'
     exp(delta / temperatura), con la temperatura che decresce ad ogni iterazione.
+
+    Se traccia=True restituisce anche la lista del miglior valore trovato
+    fino a ciascuna iterazione (curva di convergenza).
     """
     rng = random.Random(seed)
 
@@ -142,6 +157,7 @@ def simulated_annealing(sequenza_iniziale, jobs_by_id, iterazioni=500,
 
     migliore_sequenza = list(sequenza_corrente)
     migliore_utilita = utilita_corrente
+    storico = [migliore_utilita]
 
     temperatura = temperatura_iniziale
     n = len(sequenza_corrente)
@@ -165,7 +181,10 @@ def simulated_annealing(sequenza_iniziale, jobs_by_id, iterazioni=500,
                 migliore_utilita = utilita_corrente
 
         temperatura *= raffreddamento
+        storico.append(migliore_utilita)
 
+    if traccia:
+        return migliore_sequenza, migliore_utilita, storico
     return migliore_sequenza, migliore_utilita
 
 

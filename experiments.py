@@ -21,7 +21,7 @@ def main():
 
     for i in range(N_ISTANZE):
         seed = i
-        jobs_by_id = genera_istanza_casuale(N_JOBS, seed=seed)
+        jobs_by_id = genera_istanza_casuale(N_JOBS, seed=seed, con_release_date=True)
         sequenza_iniziale = list(jobs_by_id.keys())
 
         _, valore_locale = ricerca_locale_scambio(sequenza_iniziale, jobs_by_id)
