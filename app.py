@@ -6,6 +6,7 @@ from scheduling import (
     calcola_utilita_minima,
     genera_istanza_casuale,
     iterated_local_search,
+    maxmin_greedy,
     ricerca_locale_scambio,
     simulated_annealing,
     tabu_search,
@@ -15,15 +16,16 @@ st.set_page_config(page_title="Scheduling - Ricerca Locale", layout="centered")
 
 st.title("Scheduling: massimizzazione dell'utilità minima")
 st.caption(
-    "Confronto tra Ricerca locale (pairwise swap), Tabu Search, Simulated Annealing "
-    "e Iterated Local Search su 10 istanze casuali indipendenti."
+    "Confronto tra Ricerca locale (pairwise swap), Tabu Search, Simulated Annealing, "
+    "Iterated Local Search e MaxMinGreedy (ottimo esatto) su 10 istanze casuali indipendenti."
 )
 
 st.subheader("Confronto su 10 istanze casuali")
 st.caption(
+    "Problema 1|uj|umin (nessuna release date, come in Nicosia-Pacifici-Pferschy 2026). "
     "Genera 10 istanze indipendenti (seed 0-9) con — "
-    "a_j ∈ [1,5] (frazionario), b_j ∈ [10,200], p_j ∈ [1,15] — "
-    "ed esegue tutti e 4 gli algoritmi su ciascuna."
+    "a_j ∈ [0.1,2] (frazionario), b_j ∈ [200,2000], p_j ∈ [1,15] — "
+    "ed esegue tutti gli algoritmi su ciascuna, incluso l'ottimo esatto MaxMinGreedy."
 )
 
 n_jobs_multi = st.number_input("Job per istanza", min_value=2, max_value=500, value=50, key="n_jobs_multi")
@@ -70,6 +72,7 @@ def confronta_10_istanze(
             seq_iniziale, jobs_istanza, iterazioni=int(ils_iterazioni),
             num_scambi_perturbazione=int(ils_scambi), seed=i,
         )
+        seq_greedy, v_greedy = maxmin_greedy(jobs_istanza)
 
         righe_multi.append({
             "istanza": i + 1,
@@ -77,6 +80,7 @@ def confronta_10_istanze(
             "Tabu Search": v_tabu,
             "Simulated Annealing": v_sa,
             "Iterated Local Search": v_ils,
+            "MaxMinGreedy (ottimo)": v_greedy,
         })
 
         for nome_algo, seq_finale, v_finale in [
@@ -84,6 +88,7 @@ def confronta_10_istanze(
             ("Tabu Search", seq_tabu, v_tabu),
             ("Simulated Annealing", seq_sa, v_sa),
             ("Iterated Local Search", seq_ils, v_ils),
+            ("MaxMinGreedy (ottimo)", seq_greedy, v_greedy),
         ]:
             righe_dettaglio.append({
                 "istanza": i + 1,
@@ -101,8 +106,10 @@ df_multi, df_dettaglio = confronta_10_istanze(
     ils_iterazioni, ils_scambi,
 )
 
-algoritmi_multi = ["Ricerca locale", "Tabu Search", "Simulated Annealing", "Iterated Local Search"]
-colori_multi = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]
+algoritmi_multi = [
+    "Ricerca locale", "Tabu Search", "Simulated Annealing", "Iterated Local Search", "MaxMinGreedy (ottimo)",
+]
+colori_multi = ["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7"]
 
 fig_multi = go.Figure()
 for nome, colore in zip(algoritmi_multi, colori_multi):

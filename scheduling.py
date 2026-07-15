@@ -15,11 +15,11 @@ class Job:
 
 
 def genera_istanza_casuale(n_jobs, seed=None):
-    """Genera un'istanza casuale di n_jobs job.
+    """Genera un'istanza casuale di n_jobs job per il problema 1|uj|umin
+    (nessuna release date, come in Nicosia, Pacifici, Pferschy 2026).
 
-    a_j uniforme in [1, 5] (frazionario), b_j uniforme in [10, 200],
-    p_j uniforme in [1, 15], r_j uniforme in [0, 2*n_jobs] per distribuire
-    i rilasci su un orizzonte proporzionato al numero di job.
+    a_j uniforme in [0.1, 2] (frazionario), b_j uniforme in [200, 2000],
+    p_j uniforme in [1, 15], r_j = 0 per tutti i job.
     """
     rng = random.Random(seed)
     jobs_by_id = {}
@@ -27,13 +27,8 @@ def genera_istanza_casuale(n_jobs, seed=None):
         jobs_by_id[job_id] = Job(
             id=job_id,
             processing_j=rng.uniform(1, 15),
-            release_time_j=rng.uniform(0, 2 * n_jobs),
-            #coefficiente_a_j=rng.uniform(1, 5),
-            #@todo overfitting
-            #coefficiente_a_j=rng.uniform(0.1, 1),
+            release_time_j=0.0,
             coefficiente_a_j=rng.uniform(0.1, 2),
-            #coefficiente_b_j=rng.uniform(10, 200),
-            #@todo overfitting
             coefficiente_b_j=rng.uniform(200, 2000),
         )
     return jobs_by_id
