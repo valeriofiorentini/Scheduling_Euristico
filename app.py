@@ -27,22 +27,44 @@ st.caption(
 
 n_jobs_multi = st.number_input("Job per istanza", min_value=2, max_value=500, value=50, key="n_jobs_multi")
 
+with st.expander("Parametri degli algoritmi"):
+    col_t1, col_t2 = st.columns(2)
+    tabu_iterazioni = col_t1.number_input("Tabu Search — iterazioni", min_value=1, value=200)
+    tabu_tenure = col_t2.number_input("Tabu Search — tabu tenure", min_value=1, value=10)
+
+    col_s1, col_s2, col_s3 = st.columns(3)
+    sa_iterazioni = col_s1.number_input("Simulated Annealing — iterazioni", min_value=1, value=2000)
+    sa_temperatura = col_s2.number_input("Simulated Annealing — temperatura iniziale", min_value=0.01, value=20.0)
+    sa_raffreddamento = col_s3.number_input(
+        "Simulated Annealing — raffreddamento", min_value=0.01, max_value=0.999, value=0.995,
+    )
+
+    col_i1, col_i2 = st.columns(2)
+    ils_iterazioni = col_i1.number_input("Iterated Local Search — iterazioni", min_value=1, value=30)
+    ils_scambi = col_i2.number_input("Iterated Local Search — scambi per perturbazione", min_value=1, value=4)
+
 
 @st.cache_data(show_spinner="Genero e confronto le 10 istanze...")
-def confronta_10_istanze(n_jobs):
+def confronta_10_istanze(
+    n_jobs, tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura, sa_raffreddamento,
+    ils_iterazioni, ils_scambi,
+):
     righe_multi = []
     for i in range(10):
         jobs_istanza = genera_istanza_casuale(int(n_jobs), seed=i)
         seq_istanza = list(jobs_istanza.keys())
 
         _, v_locale = ricerca_locale_scambio(seq_istanza, jobs_istanza)
-        _, v_tabu = tabu_search(seq_istanza, jobs_istanza, iterazioni=200, tabu_tenure=10)
+        _, v_tabu = tabu_search(
+            seq_istanza, jobs_istanza, iterazioni=int(tabu_iterazioni), tabu_tenure=int(tabu_tenure),
+        )
         _, v_sa = simulated_annealing(
-            seq_istanza, jobs_istanza, iterazioni=2000, temperatura_iniziale=20.0,
-            raffreddamento=0.995, seed=i,
+            seq_istanza, jobs_istanza, iterazioni=int(sa_iterazioni),
+            temperatura_iniziale=sa_temperatura, raffreddamento=sa_raffreddamento, seed=i,
         )
         _, v_ils = iterated_local_search(
-            seq_istanza, jobs_istanza, iterazioni=30, num_scambi_perturbazione=4, seed=i,
+            seq_istanza, jobs_istanza, iterazioni=int(ils_iterazioni),
+            num_scambi_perturbazione=int(ils_scambi), seed=i,
         )
 
         righe_multi.append({
@@ -56,7 +78,10 @@ def confronta_10_istanze(n_jobs):
     return pd.DataFrame(righe_multi)
 
 
-df_multi = confronta_10_istanze(int(n_jobs_multi))
+df_multi = confronta_10_istanze(
+    int(n_jobs_multi), tabu_iterazioni, tabu_tenure, sa_iterazioni, sa_temperatura, sa_raffreddamento,
+    ils_iterazioni, ils_scambi,
+)
 
 algoritmi_multi = ["Ricerca locale", "Tabu Search", "Simulated Annealing", "Iterated Local Search"]
 colori_multi = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]
