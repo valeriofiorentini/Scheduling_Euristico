@@ -88,9 +88,7 @@ def confronta_10_istanze(
             righe_dettaglio.append({
                 "istanza": i + 1,
                 "algoritmo": nome_algo,
-                "sequenza iniziale (random)": ",".join(str(j) for j in seq_iniziale),
                 "valore iniziale": round(valore_iniziale, 3),
-                "sequenza finale": ",".join(str(j) for j in seq_finale),
                 "valore finale": round(v_finale, 3),
                 "miglioramento": round(v_finale - valore_iniziale, 3),
             })
